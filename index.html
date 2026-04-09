@@ -311,7 +311,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, where, serverTimestamp, onSnapshot, limit }
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, where, serverTimestamp, onSnapshot, limit }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -457,12 +457,16 @@ function incCard(inc) {
     ? `<img class="card-img" src="${inc.photo}" loading="lazy" />`
     : `<div class="card-img-placeholder">📷</div>`;
   const loc = inc.lat ? `${parseFloat(inc.lat).toFixed(4)}, ${parseFloat(inc.lng).toFixed(4)}` : 'Location unknown';
+  const isOwner = currentUser && inc.authorId === currentUser.uid;
+  const deleteBtn = isOwner
+    ? `<button onclick="deleteIncident('${inc.id}')" style="margin-left:auto;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:var(--red);border-radius:6px;padding:4px 10px;font-size:.7rem;cursor:pointer;font-family:var(--sans);">Delete</button>`
+    : '';
   return `<div class="incident-card">${img}
     <div class="card-body">
       <div class="card-top"><span class="cat-badge cat-${cat}">${label}</span><span class="card-time">${time}</span></div>
       <div class="card-title">${inc.title||'Untitled'}</div>
       <div class="card-desc">${inc.description||''}</div>
-      <div class="card-footer"><span class="card-location">📍 ${loc}</span><span class="card-author">@${inc.authorName||'anon'}</span></div>
+      <div class="card-footer"><span class="card-location">📍 ${loc}</span><span class="card-author">@${inc.authorName||'anon'}</span>${deleteBtn}</div>
     </div></div>`;
 }
 
@@ -471,6 +475,16 @@ window.filterCat = (el, cat) => {
   el.classList.add('active');
   currentFilter = cat;
   renderFeed();
+};
+
+window.deleteIncident = async (id) => {
+  if (!confirm('Delete this report?')) return;
+  try {
+    await deleteDoc(doc(db, 'incidents', id));
+    toast('Report deleted','success');
+  } catch(e) {
+    toast('Could not delete: '+e.message,'error');
+  }
 };
 
 window.refreshFeed = () => { loadFeed(); toast('Refreshed','success'); showPage('page-feed'); setNav('feed'); };
